@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valorant Roulette</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- En-tête -->
+        <header>
+            <h1>🎯 Valoroulette</h1>
+            <!-- Bouton secret discret -->
+            <button id="secretModeToggle" class="secret-toggle" title="Mode Secret">🔒</button>
+        </header>
+
+        <!-- Contenu principal -->
+        <div class="main-content">
+            <!-- Zone de la roulette -->
+            <div class="wheel-section">
+                <div class="wheel-container">
+                    <canvas id="wheelCanvas" width="500" height="500"></canvas>
+                </div>
+                
+                <div class="wheel-controls">
+                    <button id="spinBtn" class="btn-primary">🎲 LANCER LA ROUE</button>
+                    <button id="excludeBtn" class="btn-secondary" disabled>🚫 EXCLURE</button>
+                </div>
+            </div>
+
+            <!-- Panneau latéral : Agents exclus -->
+            <div class="excluded-section">
+                <h2>Agents Exclus</h2>
+                <div id="excludedList" class="excluded-list"></div>
+                <button id="resetExcludedBtn" class="btn-reset">🔄 Tout réintégrer</button>
+            </div>
+        </div>
+
+        <!-- Section Ajout d'agent -->
+        <div class="add-agent-section">
+            <h2>➕ Ajouter un agent personnalisé</h2>
+            <div class="add-agent-form">
+                <input type="text" id="agentNameInput" placeholder="Nom de l'agent" />
+                <button id="selectImageBtn" class="btn-secondary">📁 Choisir une image (PNG)</button>
+                <button id="addAgentBtn" class="btn-primary">✅ Ajouter</button>
+                <span id="selectedImagePath" class="image-path"></span>
+            </div>
+            
+            <!-- Liste des agents custom -->
+            <div id="customAgentsList" class="custom-agents-list"></div>
+        </div>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
