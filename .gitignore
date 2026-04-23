@@ -1,0 +1,21 @@
+# Dépendances Node.js
+node_modules/
+
+# Fichiers de build Electron
+dist/
+out/
+
+# Fichiers de données utilisateur (générés automatiquement)
+user_state.json
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Fichiers d'environnement
+.env
+.env.local
