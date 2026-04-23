@@ -122,7 +122,6 @@ function drawWheel(cursorAngle = currentRotation) {
     const centerX = 250;
     const centerY = 250;
     const radius = 170;
-    const textRadius = 215;
     const count = state.availableAgents.length;
     
     if (count === 0) {
@@ -144,24 +143,14 @@ function drawWheel(cursorAngle = currentRotation) {
     ctx.lineWidth = 3;
     ctx.stroke();
     
-    // Cercle extérieur pour les noms
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, textRadius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 70, 85, 0.3)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    
-    // Dessiner les agents (positions FIXES)
+    // Dessiner les agents (positions FIXES) - SANS LES NOMS
     state.availableAgents.forEach((agent, index) => {
         const angle = index * angleStep;
         const x = centerX + Math.cos(angle) * radius;
         const y = centerY + Math.sin(angle) * radius;
-        const textX = centerX + Math.cos(angle) * textRadius;
-        const textY = centerY + Math.sin(angle) * textRadius;
         
         const img = agentImages.get(agent.nom);
         if (img) {
-            // Image de l'agent
             ctx.save();
             ctx.translate(x, y);
             ctx.rotate(angle + Math.PI / 2);
@@ -175,27 +164,6 @@ function drawWheel(cursorAngle = currentRotation) {
             ctx.stroke();
             
             ctx.drawImage(img, -28, -28, 56, 56);
-            ctx.restore();
-            
-            // Nom à l'extérieur
-            ctx.save();
-            ctx.translate(textX, textY);
-            
-            ctx.font = 'bold 12px Arial';
-            ctx.fillStyle = '#ff4655';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            ctx.shadowBlur = 4;
-            ctx.fillText(agent.nom, 0, 0);
-            
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 2;
-            ctx.strokeText(agent.nom, 0, 0);
-            ctx.fillStyle = '#ff4655';
-            ctx.fillText(agent.nom, 0, 0);
-            
             ctx.restore();
         }
     });
@@ -225,13 +193,14 @@ function drawWheel(cursorAngle = currentRotation) {
             ctx.lineWidth = 1;
             ctx.stroke();
             
-            ctx.font = 'bold 13px Arial';
+            // Nom de l'agent sélectionné (plus grand et plus bas)
+            ctx.font = 'bold 22px Arial';
             ctx.fillStyle = 'white';
             ctx.shadowColor = 'black';
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 10;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(currentWinner.nom, centerX, centerY + 80);
+            ctx.fillText(currentWinner.nom, centerX, centerY + 95);
             ctx.shadowBlur = 0;
         }
     } else {
@@ -244,22 +213,21 @@ function drawWheel(cursorAngle = currentRotation) {
         ctx.stroke();
         
         ctx.fillStyle = '#ff4655';
-        ctx.font = 'bold 20px Arial';
+        ctx.font = 'bold 15px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('VALORANT', centerX, centerY);
     }
     
-    // === CURSEUR MOBILE (Flèche à l'intérieur) ===
+    // === CURSEUR MOBILE ===
     const cursorStartRadius = 75;
-    const cursorEndRadius = 130;
+    const cursorEndRadius = 135;
     
     const startX = centerX + Math.cos(cursorAngle) * cursorStartRadius;
     const startY = centerY + Math.sin(cursorAngle) * cursorStartRadius;
     const endX = centerX + Math.cos(cursorAngle) * cursorEndRadius;
     const endY = centerY + Math.sin(cursorAngle) * cursorEndRadius;
     
-    // Ligne avec dégradé
     ctx.beginPath();
     ctx.moveTo(startX, startY);
     ctx.lineTo(endX, endY);
@@ -274,7 +242,6 @@ function drawWheel(cursorAngle = currentRotation) {
     ctx.shadowBlur = 12;
     ctx.stroke();
     
-    // Pointe de flèche
     const arrowSize = 12;
     const perpAngle = cursorAngle + Math.PI / 2;
     

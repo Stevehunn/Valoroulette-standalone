@@ -6,14 +6,18 @@ const enableBtn = document.getElementById('enableBtn');
 const disableBtn = document.getElementById('disableBtn');
 
 async function init() {
-    // Charger les données
+    // Charger les agents par défaut ET les agents personnalisés
     const defaultAgents = await window.electronAPI.getDefaultAgents();
     const userState = await window.electronAPI.getUserState();
     
-    allAgents = defaultAgents;
+    // Fusionner tous les agents
+    const customAgents = userState.agentsCustom || [];
+    allAgents = [...defaultAgents, ...customAgents];
+    
     state.secretMode = userState.secretMode || { enabled: false, target: "Jett" };
     
-    // Remplir le select
+    // Remplir le select avec TOUS les agents
+    select.innerHTML = '';
     allAgents.forEach(agent => {
         const option = document.createElement('option');
         option.value = agent.nom;
