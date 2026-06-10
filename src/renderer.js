@@ -71,19 +71,19 @@ async function loadAllImages() {
                 console.warn(`❌ Image non trouvée: ${agent.nom} -> ${agent.image}`);
                 
                 const canvas = document.createElement('canvas');
-                canvas.width = 60;
-                canvas.height = 60;
+                canvas.width = 64;
+                canvas.height = 64;
                 const ctx = canvas.getContext('2d');
                 
                 const hue = (agent.nom.length * 40) % 360;
                 ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
-                ctx.fillRect(0, 0, 60, 60);
+                ctx.fillRect(0, 0, 64, 64);
                 
                 ctx.fillStyle = 'white';
-                ctx.font = 'bold 30px Arial';
+                ctx.font = 'bold 32px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(agent.nom[0], 30, 30);
+                ctx.fillText(agent.nom[0], 32, 32);
                 
                 agentImages.set(agent.nom, canvas);
                 resolve();
@@ -121,7 +121,7 @@ function drawWheel(cursorAngle = currentRotation) {
     
     const centerX = 250;
     const centerY = 250;
-    const radius = 170;
+    const radius = 240;
     const count = state.availableAgents.length;
     
     if (count === 0) {
@@ -143,11 +143,15 @@ function drawWheel(cursorAngle = currentRotation) {
     ctx.lineWidth = 3;
     ctx.stroke();
     
-    // Dessiner les agents (positions FIXES) - SANS LES NOMS
+    // Dessiner les agents (positions FIXES)
     state.availableAgents.forEach((agent, index) => {
         const angle = index * angleStep;
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
+        
+        // Positionner les agents à l'intérieur du cercle
+        const imageRadius = radius - 40; // Marge de 40px pour contenir les cercles de 32px
+        
+        const x = centerX + Math.cos(angle) * imageRadius;
+        const y = centerY + Math.sin(angle) * imageRadius;
         
         const img = agentImages.get(agent.nom);
         if (img) {
@@ -155,6 +159,7 @@ function drawWheel(cursorAngle = currentRotation) {
             ctx.translate(x, y);
             ctx.rotate(angle + Math.PI / 2);
             
+            // Cercle rouge pour l'agent (32px de rayon = 64px de diamètre)
             ctx.beginPath();
             ctx.arc(0, 0, 32, 0, Math.PI * 2);
             ctx.fillStyle = '#2a2a4a';
@@ -163,7 +168,14 @@ function drawWheel(cursorAngle = currentRotation) {
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            ctx.drawImage(img, -28, -28, 56, 56);
+            // Clip pour que l'image ne dépasse pas du cercle
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, Math.PI * 2); // Légèrement plus petit pour laisser la bordure visible
+            ctx.clip();
+            
+            // Dessiner l'image (64x64 pour correspondre au cercle de 32px de rayon)
+            ctx.drawImage(img, -32, -32, 64, 64);
+            
             ctx.restore();
         }
     });
@@ -193,7 +205,7 @@ function drawWheel(cursorAngle = currentRotation) {
             ctx.lineWidth = 1;
             ctx.stroke();
             
-            // Nom de l'agent sélectionné (plus grand et plus bas)
+            // Nom de l'agent sélectionné
             ctx.font = 'bold 22px Arial';
             ctx.fillStyle = 'white';
             ctx.shadowColor = 'black';
@@ -221,7 +233,7 @@ function drawWheel(cursorAngle = currentRotation) {
     
     // === CURSEUR MOBILE ===
     const cursorStartRadius = 75;
-    const cursorEndRadius = 135;
+    const cursorEndRadius = 155;
     
     const startX = centerX + Math.cos(cursorAngle) * cursorStartRadius;
     const startY = centerY + Math.sin(cursorAngle) * cursorStartRadius;
@@ -489,16 +501,16 @@ async function addCustomAgent() {
         };
         img.onerror = () => {
             const canvas = document.createElement('canvas');
-            canvas.width = 60;
-            canvas.height = 60;
+            canvas.width = 64;
+            canvas.height = 64;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = '#ff4655';
-            ctx.fillRect(0, 0, 60, 60);
+            ctx.fillRect(0, 0, 64, 64);
             ctx.fillStyle = 'white';
-            ctx.font = 'bold 30px Arial';
+            ctx.font = 'bold 32px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(name[0], 30, 30);
+            ctx.fillText(name[0], 32, 32);
             agentImages.set(name, canvas);
             resolve();
         };

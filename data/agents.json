@@ -108,6 +108,10 @@
     "image": "assets/agents/Waylay.png"
   },
   {
+    "nom": "Veto",
+    "image": "assets/agents/Veto.png"
+  },
+  {
     "nom": "Miks",
     "image": "assets/agents/Miks.png"
   }
