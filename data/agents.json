@@ -114,5 +114,10 @@
   {
     "nom": "Miks",
     "image": "assets/agents/Miks.png"
+  },
+  {
+    "nom": "Hush",
+    "image": "assets/agents/Hush.png"
   }
+
 ]
