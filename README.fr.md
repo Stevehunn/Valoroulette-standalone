@@ -1,6 +1,6 @@
 # Valoroulette
 
-[English](README.md) · **Français** · [Español](README.es.md)
+[English](README.md) · **Français** · [Español](README.es.md) · [Changelog](CHANGELOG.md)
 
 Valoroulette est une application de bureau Windows qui sélectionne aléatoirement un agent de VALORANT. Elle propose une flèche animée, l’exclusion d’agents, l’ajout d’agents personnalisés, un mode secret et les mises à jour via GitHub Releases.
 
