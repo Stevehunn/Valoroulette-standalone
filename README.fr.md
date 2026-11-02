@@ -4,6 +4,8 @@
 
 Valoroulette est une application de bureau Windows qui sélectionne aléatoirement un agent de VALORANT. Elle propose une flèche animée, l’exclusion d’agents, l’ajout d’agents personnalisés, un mode secret et les mises à jour via GitHub Releases.
 
+L’interface est disponible en anglais, espagnol, français, allemand, portugais, chinois simplifié, japonais, coréen et italien. Choisissez la langue dans le menu ; elle est conservée entre les sessions. Les noms des agents ne sont pas traduits.
+
 ## Fonctionnalités
 
 - Lancez la flèche pour sélectionner un agent disponible.

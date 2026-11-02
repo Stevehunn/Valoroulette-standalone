@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Valorant Roulette</title>
+    <title data-i18n="appTitle">Valoroulette</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,30 +11,44 @@
         <header>
             <h1>🎯 Valoroulette</h1>
             <details id="appMenu" class="app-menu">
-                <summary aria-label="Ouvrir le menu">☰ <span>Menu</span></summary>
+                <summary data-i18n-aria-label="menuOpen">☰ <span data-i18n="menuLabel">Menu</span></summary>
                 <div class="menu-panel">
+                    <section class="language-section">
+                        <label for="languageSelect" data-i18n="languageLabel">Language</label>
+                        <select id="languageSelect" class="language-select" data-i18n-aria-label="languageLabel">
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                            <option value="fr">Français</option>
+                            <option value="de">Deutsch</option>
+                            <option value="pt">Português</option>
+                            <option value="zh">中文</option>
+                            <option value="ja">日本語</option>
+                            <option value="ko">한국어</option>
+                            <option value="it">Italiano</option>
+                        </select>
+                    </section>
                     <section class="update-section">
-                        <h2>Mise à jour</h2>
-                        <button id="updateBtn" class="btn-secondary">↻ Vérifier les mises à jour</button>
+                        <h2 data-i18n="updatesTitle">Updates</h2>
+                        <button id="updateBtn" class="btn-secondary" data-i18n="checkUpdates">↻ Check for updates</button>
                         <progress id="updateProgress" max="100" value="0" hidden></progress>
-                        <p id="updateStatus" class="update-status" aria-live="polite">
-                            Vérifiez si une nouvelle version est disponible.
+                        <p id="updateStatus" class="update-status" aria-live="polite" data-i18n="updateIdle">
+                            Check whether a new version is available.
                         </p>
                     </section>
-                    <button id="secretModeToggle" class="secret-toggle" title="Mode Secret" aria-pressed="false">
-                        🔒 Activer le mode secret
+                    <button id="secretModeToggle" class="secret-toggle" title="Secret Mode" aria-pressed="false">
+                        🔒 Enable Secret Mode
                     </button>
                     <div id="secretTargetControls" class="secret-target-controls" hidden>
-                        <label class="secret-target-label" for="secretTargetSelect">Agent cible</label>
+                        <label class="secret-target-label" for="secretTargetSelect" data-i18n="targetAgent">Target agent</label>
                         <select id="secretTargetSelect" class="secret-target-select"></select>
                     </div>
                     <p id="secretModeStatus" class="secret-mode-status" aria-live="polite"></p>
                     <section class="add-agent-section">
-                        <h2>➕ Ajouter un agent personnalisé</h2>
+                        <h2 data-i18n="addCustomAgent">➕ Add a custom agent</h2>
                         <div class="add-agent-form">
-                            <input type="text" id="agentNameInput" placeholder="Nom de l'agent" />
-                            <button id="selectImageBtn" class="btn-secondary">📁 Choisir une image (PNG)</button>
-                            <button id="addAgentBtn" class="btn-primary">✅ Ajouter</button>
+                            <input type="text" id="agentNameInput" data-i18n-placeholder="agentNamePlaceholder" placeholder="Agent name" />
+                            <button id="selectImageBtn" class="btn-secondary" data-i18n="chooseImage">📁 Choose image (PNG)</button>
+                            <button id="addAgentBtn" class="btn-primary" data-i18n="addButton">✅ Add</button>
                             <span id="selectedImagePath" class="image-path"></span>
                         </div>
                         <div id="customAgentsList" class="custom-agents-list"></div>
@@ -52,21 +66,22 @@
                 </div>
                 
                 <div class="wheel-controls">
-                    <button id="spinBtn" class="btn-primary">🎲 LANCER LA ROUE</button>
-                    <button id="excludeBtn" class="btn-secondary" disabled>🚫 EXCLURE</button>
+                    <button id="spinBtn" class="btn-primary" data-i18n="spin">🎲 SPIN</button>
+                    <button id="excludeBtn" class="btn-secondary" disabled data-i18n="exclude">🚫 EXCLUDE</button>
                 </div>
             </div>
 
             <!-- Panneau latéral : Agents exclus -->
             <div class="excluded-section">
-                <h2>Agents Exclus</h2>
+                <h2 data-i18n="excludedAgents">Excluded Agents</h2>
                 <div id="excludedList" class="excluded-list"></div>
-                <button id="resetExcludedBtn" class="btn-reset">🔄 Tout réintégrer</button>
+                <button id="resetExcludedBtn" class="btn-reset" data-i18n="restoreAll">🔄 Restore all</button>
             </div>
         </div>
 
     </div>
 
+    <script src="i18n.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>

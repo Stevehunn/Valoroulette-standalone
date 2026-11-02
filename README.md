@@ -4,6 +4,8 @@
 
 Valoroulette is a Windows desktop app that randomly selects a VALORANT agent. It includes a spinning pointer, agent exclusions, custom agents, a secret target mode, and GitHub release updates.
 
+The interface is available in English, Spanish, French, German, Portuguese, Simplified Chinese, Japanese, Korean, and Italian. Choose a language from the app menu; the selection is saved between sessions. Agent names are not translated.
+
 ## Features
 
 - Spin the pointer to select from available agents.

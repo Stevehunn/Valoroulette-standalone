@@ -4,6 +4,7 @@ let state = {
     availableAgents: [],
     excludedAgents: [],
     customAgents: [],
+    language: 'en',
     secretMode: { enabled: false, target: "Jett" }
 };
 
@@ -34,7 +35,10 @@ const secretModeStatus = document.getElementById('secretModeStatus');
 const updateBtn = document.getElementById('updateBtn');
 const updateProgress = document.getElementById('updateProgress');
 const updateStatus = document.getElementById('updateStatus');
+const languageSelect = document.getElementById('languageSelect');
 const appMenu = document.getElementById('appMenu');
+let updateStatusKey = 'updateIdle';
+let updateStatusValues = {};
 
 /** Load persisted data and assets before drawing the initial roulette. */
 async function init() {
@@ -43,7 +47,13 @@ async function init() {
     
     state.customAgents = userState.agentsCustom || [];
     state.excludedAgents = userState.agentsExcluded || [];
+    state.language = window.appI18n.languages.includes(userState.language)
+        ? userState.language
+        : window.appI18n.detectLanguage();
     state.secretMode = userState.secretMode || { enabled: false, target: "Jett" };
+    languageSelect.value = state.language;
+    window.appI18n.setLanguage(state.language);
+    renderUpdateStatus();
     
     state.allAgents = [...defaultAgents, ...state.customAgents];
     
@@ -55,6 +65,16 @@ async function init() {
     updateCustomAgentsDisplay();
     updateSecretTargetOptions();
     updateSecretButtonState();
+}
+
+function renderUpdateStatus() {
+    updateStatus.textContent = window.appI18n.translate(updateStatusKey, updateStatusValues);
+}
+
+function setUpdateStatus(key, values = {}) {
+    updateStatusKey = key;
+    updateStatusValues = values;
+    renderUpdateStatus();
 }
 
 /**
@@ -110,19 +130,24 @@ function updateAvailableAgents() {
 }
 
 function updateSecretButtonState() {
+    const target = state.secretMode.target;
+
     if (state.secretMode.enabled) {
         secretModeToggle.classList.add('active');
-        secretModeToggle.textContent = '🔓 Désactiver le mode secret';
-        secretModeToggle.title = `Mode Secret ACTIF - Cible: ${state.secretMode.target}`;
+        secretModeToggle.textContent = window.appI18n.translate('secretDisable');
+        secretModeToggle.title = window.appI18n.translate('secretTitleActive', { target });
         secretModeToggle.setAttribute('aria-pressed', 'true');
     } else {
         secretModeToggle.classList.remove('active');
-        secretModeToggle.textContent = '🔒 Activer le mode secret';
-        secretModeToggle.title = 'Mode Secret INACTIF';
+        secretModeToggle.textContent = window.appI18n.translate('secretEnable');
+        secretModeToggle.title = window.appI18n.translate('secretTitleInactive');
         secretModeToggle.setAttribute('aria-pressed', 'false');
     }
 
-    secretModeStatus.textContent = `Mode secret ${state.secretMode.enabled ? 'activé' : 'désactivé'} — cible : ${state.secretMode.target}`;
+    secretModeStatus.textContent = window.appI18n.translate(
+        state.secretMode.enabled ? 'secretStatusActive' : 'secretStatusInactive',
+        { target }
+    );
     secretModeToggle.disabled = state.allAgents.length === 0;
     secretTargetControls.hidden = !state.secretMode.enabled;
 }
@@ -164,7 +189,7 @@ function drawWheel(wheelRotation = currentRotation) {
         ctx.fillStyle = 'white';
         ctx.font = '20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('Aucun agent disponible', centerX, centerY);
+        ctx.fillText(window.appI18n.translate('noAgentsAvailable'), centerX, centerY);
         return;
     }
     
@@ -464,7 +489,10 @@ function resetAllExcluded() {
 
 function updateExcludedDisplay() {
     if (state.excludedAgents.length === 0) {
-        excludedList.innerHTML = '<p style="color: #888;">Aucun agent exclu</p>';
+        const emptyMessage = document.createElement('p');
+        emptyMessage.textContent = window.appI18n.translate('noExcludedAgents');
+        emptyMessage.style.color = '#888';
+        excludedList.replaceChildren(emptyMessage);
         return;
     }
     
@@ -496,17 +524,17 @@ function updateExcludedDisplay() {
 async function addCustomAgent() {
     const name = agentNameInput.value.trim();
     if (!name) {
-        alert('Veuillez entrer un nom');
+        alert(window.appI18n.translate('enterAgentName'));
         return;
     }
     
     if (!selectedImageForCustom) {
-        alert('Veuillez sélectionner une image');
+        alert(window.appI18n.translate('selectAgentImage'));
         return;
     }
     
     if (state.allAgents.some(a => a.nom.toLowerCase() === name.toLowerCase())) {
-        alert('Un agent avec ce nom existe déjà');
+        alert(window.appI18n.translate('duplicateAgentName'));
         return;
     }
     
@@ -555,7 +583,10 @@ async function deleteCustomAgent(agent) {
 
 function updateCustomAgentsDisplay() {
     if (state.customAgents.length === 0) {
-        customAgentsList.innerHTML = '<p style="color: #888;">Aucun agent personnalisé</p>';
+        const emptyMessage = document.createElement('p');
+        emptyMessage.textContent = window.appI18n.translate('noCustomAgents');
+        emptyMessage.style.color = '#888';
+        customAgentsList.replaceChildren(emptyMessage);
         return;
     }
     
@@ -576,7 +607,7 @@ function updateCustomAgentsDisplay() {
         div.appendChild(nameSpan);
         
         const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Supprimer';
+        deleteBtn.textContent = window.appI18n.translate('removeAgent');
         deleteBtn.onclick = () => deleteCustomAgent(agent);
         div.appendChild(deleteBtn);
         
@@ -589,6 +620,7 @@ async function saveState() {
     await window.electronAPI.saveUserState({
         agentsCustom: state.customAgents,
         agentsExcluded: state.excludedAgents,
+        language: state.language,
         secretMode: state.secretMode
     });
 }
@@ -605,53 +637,73 @@ secretTargetSelect.addEventListener('change', () => {
     saveState();
 });
 
+languageSelect.addEventListener('change', () => {
+    state.language = languageSelect.value;
+    window.appI18n.setLanguage(state.language);
+    renderUpdateStatus();
+    updateSecretButtonState();
+    updateExcludedDisplay();
+    updateCustomAgentsDisplay();
+    drawWheel(currentRotation);
+    if (selectedImageForCustom) {
+        selectedImagePath.textContent = window.appI18n.translate('selectedImage', {
+            name: selectedImageForCustom.name
+        });
+    }
+    saveState();
+});
+
 updateBtn.addEventListener('click', async () => {
     updateBtn.disabled = true;
     updateProgress.hidden = true;
-    updateStatus.textContent = 'Recherche des mises à jour…';
+    setUpdateStatus('updateChecking');
 
     try {
         await window.electronAPI.checkForUpdates();
     } catch (error) {
         updateBtn.disabled = false;
-        updateStatus.textContent = `Échec de la vérification : ${error.message}`;
+        setUpdateStatus('updateCheckFailed', {
+            message: error.message
+        });
     }
 });
 
 window.electronAPI.onUpdateStatus(({ status, version, percent, message }) => {
     switch (status) {
         case 'checking':
-            updateStatus.textContent = 'Recherche des mises à jour…';
+            setUpdateStatus('updateChecking');
             break;
         case 'current':
             updateBtn.disabled = false;
             updateProgress.hidden = true;
-            updateStatus.textContent = 'Votre application est à jour.';
+            setUpdateStatus('updateCurrent');
             break;
         case 'downloading':
-            updateStatus.textContent = `Version ${version} disponible. Téléchargement…`;
+            setUpdateStatus('updateAvailable', { version });
             updateProgress.value = 0;
             updateProgress.hidden = false;
             break;
         case 'progress':
             updateProgress.value = percent;
-            updateStatus.textContent = `Téléchargement de la mise à jour : ${Math.round(percent)} %`;
+            setUpdateStatus('updateProgress', {
+                percent: Math.round(percent)
+            });
             break;
         case 'installing':
-            updateStatus.textContent = `Version ${version} téléchargée. Installation en cours…`;
+            setUpdateStatus('updateInstalling', { version });
             break;
         case 'unavailable':
             updateBtn.disabled = false;
-            updateStatus.textContent = 'Les mises à jour sont disponibles dans la version installée de l’application.';
+            setUpdateStatus('updateUnavailable');
             break;
         case 'error':
             updateBtn.disabled = false;
             updateProgress.hidden = true;
-            updateStatus.textContent = `Erreur de mise à jour : ${message}`;
+            setUpdateStatus('updateFailed', { message });
             break;
         default:
             updateBtn.disabled = false;
-            updateStatus.textContent = 'État de mise à jour inconnu.';
+            setUpdateStatus('updateUnknown');
     }
 });
 
@@ -659,7 +711,9 @@ selectImageBtn.addEventListener('click', async () => {
     const result = await window.electronAPI.selectImage();
     if (result.success) {
         selectedImageForCustom = result;
-        selectedImagePath.textContent = `Image: ${result.name}.png`;
+        selectedImagePath.textContent = window.appI18n.translate('selectedImage', {
+            name: result.name
+        });
         addAgentBtn.disabled = false;
     }
 });
