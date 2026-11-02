@@ -2,6 +2,18 @@
 
 Notable changes to Valoroulette are documented here.
 
+## [0.1.2]
+
+### Changed
+
+- Secret Mode now selects its configured target only when clicking Spin with Ctrl or Alt held; a regular click remains random.
+- Reduced the initial window height and limited the excluded-agent list to two visible rows before scrolling.
+- Refined the custom-agent button styling, removed the target emoji from the app title, and applied the app icon to the window.
+
+### Performance
+
+- Cache the static wheel and agent portraits so spin animations redraw only the pointer and winner display.
+
 ## [0.1.1]
 
 ### Added
