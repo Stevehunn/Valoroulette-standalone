@@ -147,7 +147,9 @@ h2 {
     flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 15px;
-    min-height: 100px;
+    min-height: 46px;
+    max-height: 108px;
+    overflow-y: auto;
 }
 
 .excluded-item {
@@ -583,8 +585,133 @@ h2 {
 }
 
 .main-content {
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+    align-items: start;
     gap: 22px;
+}
+
+.side-panel {
+    display: grid;
+    gap: 18px;
+    min-width: 0;
+}
+
+.role-section {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 0;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+}
+
+.role-section[hidden] {
+    display: none;
+}
+
+.role-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.role-section-heading h2 {
+    margin: 0 0 5px;
+}
+
+.role-section-heading p {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.role-section-heading button {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+}
+
+.role-section-heading button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.role-filters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.role-card {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.035);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.role-card:has(.role-filter-label input:checked) {
+    border-color: rgba(255, 70, 85, 0.65);
+    background: rgba(255, 70, 85, 0.08);
+}
+
+.role-card.excluded {
+    border-color: rgba(255, 70, 85, 0.45);
+    background: rgba(255, 70, 85, 0.09);
+}
+
+.role-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.role-filter-label input {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    accent-color: var(--accent);
+}
+
+.role-filter-label img {
+    width: 35px;
+    height: 35px;
+    flex: 0 0 auto;
+    object-fit: contain;
+}
+
+.role-exclude-btn {
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid rgba(255, 70, 85, 0.38);
+    border-radius: 8px;
+    background: var(--surface-raised);
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.role-exclude-btn:hover {
+    border-color: var(--accent);
+    background: rgba(255, 70, 85, 0.18);
+}
+
+.role-card.excluded .role-exclude-btn {
+    border-color: rgba(90, 200, 145, 0.45);
+}
+
+.role-card.excluded .role-exclude-btn:hover {
+    background: rgba(90, 200, 145, 0.13);
 }
 
 .excluded-section,
@@ -598,10 +725,11 @@ h2 {
 .excluded-section {
     align-self: flex-start;
     min-width: 250px;
+    width: 100%;
 }
 
 .wheel-container {
-    width: min(500px, 68vw);
+    width: min(500px, 100%, max(240px, calc(100vh - 300px)));
     height: auto;
     aspect-ratio: 1;
     margin: 0 auto 20px;
@@ -609,6 +737,7 @@ h2 {
 
 #wheelCanvas {
     display: block;
+    cursor: pointer;
 }
 
 .wheel-controls {
@@ -739,6 +868,11 @@ h2 {
     border: 1px solid var(--border);
     border-radius: 12px;
     background: rgba(255, 255, 255, 0.035);
+}
+
+.update-section[hidden],
+.update-section [hidden] {
+    display: none;
 }
 
 .update-section h2 {
@@ -873,8 +1007,9 @@ h2 {
 
 .add-agent-form button {
     min-width: 0;
+    min-height: 44px;
     padding: 10px 8px;
-    font-size: 0.8rem;
+    font-size: 0.95rem;
 }
 
 .image-path {
@@ -921,8 +1056,16 @@ h2 {
     }
 
     .main-content {
-        flex-direction: column;
+        grid-template-columns: 1fr;
         gap: 16px;
+    }
+
+    .role-section {
+        padding: 16px;
+    }
+
+    .role-filters {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .wheel-section {
@@ -950,5 +1093,18 @@ h2 {
     .wheel-controls button {
         padding: 11px 14px;
         font-size: 0.8rem;
+    }
+
+    .role-section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .role-section-heading button {
+        width: 100%;
+    }
+
+    .role-filters {
+        grid-template-columns: 1fr;
     }
 }

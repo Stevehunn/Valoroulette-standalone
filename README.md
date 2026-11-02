@@ -9,6 +9,7 @@ The interface is available in English, Spanish, French, German, Portuguese, Simp
 ## Features
 
 - Spin the pointer to select from available agents.
+- Filter the roulette by one or more agent roles, or exclude and restore an entire role.
 - Exclude a selected agent, restore individual agents, or reset all exclusions.
 - Add custom agents with PNG portraits.
 - Optionally guarantee a chosen agent with Secret Mode.

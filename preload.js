@@ -9,5 +9,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     deleteCustomImage: (path) => ipcRenderer.invoke('delete-custom-image', path),
     onOpenSecretMenu: (callback) => ipcRenderer.on('open-secret-menu', () => callback()),
     checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+    downloadUpdate: () => ipcRenderer.invoke('download-update'),
     onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, update) => callback(update))
 });

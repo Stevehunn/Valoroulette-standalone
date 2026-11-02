@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, globalShortcut, screen } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -34,8 +34,8 @@ autoUpdater.autoInstallOnAppQuit = false;
 autoUpdater.allowPrerelease = false;
 
 /**
- * Relay updater events to the renderer. The updater downloads only after the
- * user requests a check; a completed download is installed automatically.
+ * Relay updater events to the renderer. A new version is downloaded only
+ * after the user chooses to update, then installation starts automatically.
  */
 function sendUpdateStatus(status, details = {}) {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -48,10 +48,7 @@ autoUpdater.on('checking-for-update', () => {
 });
 
 autoUpdater.on('update-available', (info) => {
-    sendUpdateStatus('downloading', { version: info.version });
-    autoUpdater.downloadUpdate().catch((error) => {
-        sendUpdateStatus('error', { message: error.message });
-    });
+    sendUpdateStatus('available', { version: info.version });
 });
 
 autoUpdater.on('update-not-available', () => {
@@ -72,9 +69,14 @@ autoUpdater.on('error', (error) => {
 });
 
 function createWindow() {
+    const { width: workAreaWidth, height: workAreaHeight } = screen.getPrimaryDisplay().workAreaSize;
+    const windowWidth = Math.min(1200, workAreaWidth);
+    const windowHeight = Math.min(850, workAreaHeight);
+
     mainWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
+        width: windowWidth,
+        height: windowHeight,
+        icon: path.join(__dirname, 'assets', 'icons', 'icon.ico'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
@@ -123,6 +125,21 @@ ipcMain.handle('check-for-updates', async () => {
 
     await autoUpdater.checkForUpdates();
     return true;
+});
+
+ipcMain.handle('download-update', async () => {
+    if (!app.isPackaged) {
+        sendUpdateStatus('unavailable');
+        return false;
+    }
+
+    try {
+        await autoUpdater.downloadUpdate();
+        return true;
+    } catch (error) {
+        sendUpdateStatus('error', { message: error.message });
+        throw error;
+    }
 });
 
 ipcMain.handle('save-user-state', async (event, state) => {

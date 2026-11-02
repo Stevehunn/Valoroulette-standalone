@@ -9,6 +9,7 @@ L’interface est disponible en anglais, espagnol, français, allemand, portugai
 ## Fonctionnalités
 
 - Lancez la flèche pour sélectionner un agent disponible.
+- Filtrez la roulette par un ou plusieurs rôles, ou excluez et réintégrez un rôle entier.
 - Excluez l’agent sélectionné, réintégrez des agents individuellement ou réinitialisez toutes les exclusions.
 - Ajoutez des agents personnalisés avec une image PNG.
 - Activez le mode secret pour garantir l’agent de votre choix.

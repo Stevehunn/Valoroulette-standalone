@@ -3,10 +3,40 @@ let state = {
     allAgents: [],
     availableAgents: [],
     excludedAgents: [],
+    excludedRoles: [],
+    selectedRoles: [],
+    roleSectionVisible: true,
     customAgents: [],
     language: 'en',
     secretMode: { enabled: false, target: "Jett" }
 };
+
+const AGENT_ROLES = [
+    {
+        id: 'duelist',
+        labelKey: 'roleDuelist',
+        icon: '../assets/logo/duelist.png',
+        agents: ['Phoenix', 'Jett', 'Raze', 'Reyna', 'Yoru', 'Neon', 'Iso', 'Waylay', 'Hush']
+    },
+    {
+        id: 'initiator',
+        labelKey: 'roleInitiator',
+        icon: '../assets/logo/initiator.png',
+        agents: ['Sova', 'Breach', 'Skye', 'KAY/O', 'Fade', 'Gekko', 'Tejo']
+    },
+    {
+        id: 'controller',
+        labelKey: 'roleController',
+        icon: '../assets/logo/controller.png',
+        agents: ['Brimstone', 'Omen', 'Viper', 'Astra', 'Harbor', 'Clove', 'Miks']
+    },
+    {
+        id: 'sentinel',
+        labelKey: 'roleSentinel',
+        icon: '../assets/logo/sentinel.png',
+        agents: ['Sage', 'Killjoy', 'Cypher', 'Chamber', 'Deadlock', 'Vyse']
+    }
+];
 
 // Variables pour l'animation
 let canvas = document.getElementById('wheelCanvas');
@@ -32,13 +62,20 @@ const secretModeToggle = document.getElementById('secretModeToggle');
 const secretTargetControls = document.getElementById('secretTargetControls');
 const secretTargetSelect = document.getElementById('secretTargetSelect');
 const secretModeStatus = document.getElementById('secretModeStatus');
+const secretShortcutHint = document.getElementById('secretShortcutHint');
 const updateBtn = document.getElementById('updateBtn');
+const updateSection = document.getElementById('updateSection');
 const updateProgress = document.getElementById('updateProgress');
 const updateStatus = document.getElementById('updateStatus');
 const languageSelect = document.getElementById('languageSelect');
 const appMenu = document.getElementById('appMenu');
+const roleFilters = document.getElementById('roleFilters');
+const clearRoleFiltersBtn = document.getElementById('clearRoleFiltersBtn');
+const roleSection = document.getElementById('roleSection');
+const toggleRoleSectionBtn = document.getElementById('toggleRoleSectionBtn');
 let updateStatusKey = 'updateIdle';
 let updateStatusValues = {};
+let availableUpdateVersion = null;
 
 /** Load persisted data and assets before drawing the initial roulette. */
 async function init() {
@@ -47,12 +84,21 @@ async function init() {
     
     state.customAgents = userState.agentsCustom || [];
     state.excludedAgents = userState.agentsExcluded || [];
+    state.excludedRoles = (userState.excludedRoles || []).filter(role =>
+        AGENT_ROLES.some(definition => definition.id === role)
+    );
+    state.selectedRoles = (userState.selectedRoles || []).filter(role =>
+        AGENT_ROLES.some(definition => definition.id === role)
+    );
+    state.roleSectionVisible = userState.roleSectionVisible !== false;
     state.language = window.appI18n.languages.includes(userState.language)
         ? userState.language
         : window.appI18n.detectLanguage();
     state.secretMode = userState.secretMode || { enabled: false, target: "Jett" };
     languageSelect.value = state.language;
     window.appI18n.setLanguage(state.language);
+    updateRoleSectionToggle();
+    updateBtn.textContent = window.appI18n.translate('updateNow');
     renderUpdateStatus();
     
     state.allAgents = [...defaultAgents, ...state.customAgents];
@@ -60,21 +106,44 @@ async function init() {
     await loadAllImages();
     
     updateAvailableAgents();
+    renderRoleFilters();
     drawWheel();
     updateExcludedDisplay();
     updateCustomAgentsDisplay();
     updateSecretTargetOptions();
     updateSecretButtonState();
+
+    try {
+        await window.electronAPI.checkForUpdates();
+    } catch (error) {
+        setUpdateStatus('updateCheckFailed', { message: error.message });
+    }
 }
 
 function renderUpdateStatus() {
     updateStatus.textContent = window.appI18n.translate(updateStatusKey, updateStatusValues);
 }
 
+function updateRoleSectionToggle() {
+    roleSection.hidden = !state.roleSectionVisible;
+    toggleRoleSectionBtn.textContent = window.appI18n.translate(
+        state.roleSectionVisible ? 'hideRoleSection' : 'showRoleSection'
+    );
+    toggleRoleSectionBtn.setAttribute('aria-expanded', String(state.roleSectionVisible));
+}
+
+function toggleRoleSection() {
+    state.roleSectionVisible = !state.roleSectionVisible;
+    updateRoleSectionToggle();
+    saveState();
+}
+
 function setUpdateStatus(key, values = {}) {
     updateStatusKey = key;
     updateStatusValues = values;
     renderUpdateStatus();
+    updateStatus.hidden = false;
+    updateSection.hidden = false;
 }
 
 /**
@@ -124,9 +193,87 @@ async function loadAllImages() {
 }
 
 function updateAvailableAgents() {
-    state.availableAgents = state.allAgents.filter(
-        agent => !state.excludedAgents.includes(agent.nom)
-    );
+    const hasRoleFilter = state.selectedRoles.length > 0;
+    state.availableAgents = state.allAgents.filter(agent => {
+        if (state.excludedAgents.includes(agent.nom)) return false;
+
+        const role = AGENT_ROLES.find(definition => definition.agents.includes(agent.nom));
+        if (role && state.excludedRoles.includes(role.id)) return false;
+
+        if (!hasRoleFilter) return true;
+        return role && state.selectedRoles.includes(role.id);
+    });
+}
+
+function renderRoleFilters() {
+    roleFilters.replaceChildren();
+
+    AGENT_ROLES.forEach(role => {
+        const card = document.createElement('div');
+        card.className = 'role-card';
+        if (state.excludedRoles.includes(role.id)) card.classList.add('excluded');
+
+        const label = document.createElement('label');
+        label.className = 'role-filter-label';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.value = role.id;
+        checkbox.checked = state.selectedRoles.includes(role.id);
+        checkbox.setAttribute('aria-label', window.appI18n.translate(role.labelKey));
+        checkbox.addEventListener('change', () => {
+            if (checkbox.checked) {
+                state.selectedRoles = [...new Set([...state.selectedRoles, role.id])];
+            } else {
+                state.selectedRoles = state.selectedRoles.filter(id => id !== role.id);
+            }
+            refreshRoleFilteredWheel();
+        });
+
+        const icon = document.createElement('img');
+        icon.src = role.icon;
+        icon.alt = '';
+        icon.setAttribute('aria-hidden', 'true');
+
+        const roleName = document.createElement('span');
+        roleName.textContent = window.appI18n.translate(role.labelKey);
+
+        label.append(checkbox, icon, roleName);
+
+        const excludeButton = document.createElement('button');
+        excludeButton.type = 'button';
+        excludeButton.className = 'role-exclude-btn';
+        excludeButton.textContent = window.appI18n.translate(
+            state.excludedRoles.includes(role.id) ? 'restoreRole' : 'excludeRole'
+        );
+        excludeButton.setAttribute('aria-pressed', String(state.excludedRoles.includes(role.id)));
+        excludeButton.addEventListener('click', () => toggleRoleExclusion(role.id));
+
+        card.append(label, excludeButton);
+        roleFilters.appendChild(card);
+    });
+
+    clearRoleFiltersBtn.disabled = state.selectedRoles.length === 0;
+}
+
+function refreshRoleFilteredWheel() {
+    updateAvailableAgents();
+    currentWinner = null;
+    excludeBtn.disabled = true;
+    wheelContainer.classList.remove('winner-selected');
+    renderRoleFilters();
+    drawWheel(currentRotation);
+    saveState();
+}
+
+function toggleRoleExclusion(roleId) {
+    if (state.excludedRoles.includes(roleId)) {
+        state.excludedRoles = state.excludedRoles.filter(id => id !== roleId);
+    } else {
+        state.excludedRoles = [...state.excludedRoles, roleId];
+    }
+
+    refreshRoleFilteredWheel();
 }
 
 function updateSecretButtonState() {
@@ -150,6 +297,7 @@ function updateSecretButtonState() {
     );
     secretModeToggle.disabled = state.allAgents.length === 0;
     secretTargetControls.hidden = !state.secretMode.enabled;
+    secretShortcutHint.hidden = !state.secretMode.enabled;
 }
 
 function updateSecretTargetOptions() {
@@ -344,9 +492,18 @@ function drawWheel(wheelRotation = currentRotation) {
 }
 
 // ============ ANIMATION ============
-function spinWheel() {
+function spinWheel(event) {
     if (isSpinning || state.availableAgents.length === 0) return;
-    
+
+    const useSecretTarget = state.secretMode.enabled && (event.ctrlKey || event.altKey);
+    if (useSecretTarget && !state.availableAgents.some(agent => agent.nom === state.secretMode.target)) {
+        secretModeStatus.textContent = window.appI18n.translate('secretTargetUnavailable', {
+            target: state.secretMode.target
+        });
+        return;
+    }
+
+    updateSecretButtonState();
     isSpinning = true;
     spinBtn.disabled = true;
     excludeBtn.disabled = true;
@@ -359,7 +516,7 @@ function spinWheel() {
     let spinVelocity = 0.3 + Math.random() * 0.5;
     
     let secretTargetAngle = null;
-    if (state.secretMode.enabled && state.availableAgents.length > 0) {
+    if (useSecretTarget) {
         const targetIndex = state.availableAgents.findIndex(a => a.nom === state.secretMode.target);
         if (targetIndex !== -1) {
             const angleStep = (Math.PI * 2) / state.availableAgents.length;
@@ -451,18 +608,45 @@ function toggleSecretMode() {
 // ============ EXCLUSION ============
 function excludeCurrentAgent() {
     if (!currentWinner) return;
-    
-    if (!state.excludedAgents.includes(currentWinner.nom)) {
-        state.excludedAgents.push(currentWinner.nom);
-        updateAvailableAgents();
-        currentWinner = null;
-        drawWheel(currentRotation);
-        updateExcludedDisplay();
-        saveState();
-        
-        excludeBtn.disabled = true;
-        wheelContainer.classList.remove('winner-selected');
-    }
+
+    excludeAgent(currentWinner.nom);
+}
+
+function excludeAgent(agentName) {
+    if (state.excludedAgents.includes(agentName)) return;
+
+    state.excludedAgents.push(agentName);
+    updateAvailableAgents();
+    currentWinner = null;
+    drawWheel(currentRotation);
+    updateExcludedDisplay();
+    saveState();
+
+    excludeBtn.disabled = true;
+    wheelContainer.classList.remove('winner-selected');
+}
+
+function excludeClickedAgent(event) {
+    if (isSpinning || state.availableAgents.length === 0) return;
+
+    const bounds = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / bounds.width;
+    const scaleY = canvas.height / bounds.height;
+    const clickX = (event.clientX - bounds.left) * scaleX;
+    const clickY = (event.clientY - bounds.top) * scaleY;
+    const center = canvas.width / 2;
+    const portraitRadius = 32;
+    const orbitRadius = 200;
+    const angleStep = (Math.PI * 2) / state.availableAgents.length;
+
+    const clickedAgent = state.availableAgents.find((agent, index) => {
+        const angle = index * angleStep;
+        const agentX = center + Math.cos(angle) * orbitRadius;
+        const agentY = center + Math.sin(angle) * orbitRadius;
+        return Math.hypot(clickX - agentX, clickY - agentY) <= portraitRadius;
+    });
+
+    if (clickedAgent) excludeAgent(clickedAgent.nom);
 }
 
 function reintegrateAgent(agentName) {
@@ -478,10 +662,12 @@ function reintegrateAgent(agentName) {
 
 function resetAllExcluded() {
     state.excludedAgents = [];
+    state.excludedRoles = [];
     updateAvailableAgents();
     currentWinner = null;
     drawWheel(currentRotation);
     updateExcludedDisplay();
+    renderRoleFilters();
     saveState();
     
     wheelContainer.classList.remove('winner-selected');
@@ -620,6 +806,9 @@ async function saveState() {
     await window.electronAPI.saveUserState({
         agentsCustom: state.customAgents,
         agentsExcluded: state.excludedAgents,
+        excludedRoles: state.excludedRoles,
+        selectedRoles: state.selectedRoles,
+        roleSectionVisible: state.roleSectionVisible,
         language: state.language,
         secretMode: state.secretMode
     });
@@ -628,6 +817,7 @@ async function saveState() {
 // ============ EVENT LISTENERS ============
 spinBtn.addEventListener('click', spinWheel);
 excludeBtn.addEventListener('click', excludeCurrentAgent);
+canvas.addEventListener('click', excludeClickedAgent);
 resetExcludedBtn.addEventListener('click', resetAllExcluded);
 secretModeToggle.addEventListener('click', toggleSecretMode);
 
@@ -637,13 +827,22 @@ secretTargetSelect.addEventListener('change', () => {
     saveState();
 });
 
+clearRoleFiltersBtn.addEventListener('click', () => {
+    state.selectedRoles = [];
+    refreshRoleFilteredWheel();
+});
+toggleRoleSectionBtn.addEventListener('click', toggleRoleSection);
+
 languageSelect.addEventListener('change', () => {
     state.language = languageSelect.value;
     window.appI18n.setLanguage(state.language);
+    updateBtn.textContent = window.appI18n.translate('updateNow');
+    updateRoleSectionToggle();
     renderUpdateStatus();
     updateSecretButtonState();
     updateExcludedDisplay();
     updateCustomAgentsDisplay();
+    renderRoleFilters();
     drawWheel(currentRotation);
     if (selectedImageForCustom) {
         selectedImagePath.textContent = window.appI18n.translate('selectedImage', {
@@ -655,11 +854,12 @@ languageSelect.addEventListener('change', () => {
 
 updateBtn.addEventListener('click', async () => {
     updateBtn.disabled = true;
-    updateProgress.hidden = true;
-    setUpdateStatus('updateChecking');
+    updateProgress.value = 0;
+    updateProgress.hidden = false;
+    setUpdateStatus('updateAvailable', { version: availableUpdateVersion });
 
     try {
-        await window.electronAPI.checkForUpdates();
+        await window.electronAPI.downloadUpdate();
     } catch (error) {
         updateBtn.disabled = false;
         setUpdateStatus('updateCheckFailed', {
@@ -671,12 +871,23 @@ updateBtn.addEventListener('click', async () => {
 window.electronAPI.onUpdateStatus(({ status, version, percent, message }) => {
     switch (status) {
         case 'checking':
-            setUpdateStatus('updateChecking');
+            updateSection.hidden = true;
             break;
-        case 'current':
+        case 'available':
+            availableUpdateVersion = version;
+            updateBtn.textContent = window.appI18n.translate('updateNow');
+            updateBtn.hidden = false;
             updateBtn.disabled = false;
             updateProgress.hidden = true;
-            setUpdateStatus('updateCurrent');
+            updateStatus.hidden = true;
+            updateSection.hidden = false;
+            break;
+        case 'current':
+            availableUpdateVersion = null;
+            updateBtn.hidden = true;
+            updateProgress.hidden = true;
+            updateStatus.hidden = true;
+            updateSection.hidden = true;
             break;
         case 'downloading':
             setUpdateStatus('updateAvailable', { version });
@@ -691,14 +902,18 @@ window.electronAPI.onUpdateStatus(({ status, version, percent, message }) => {
             break;
         case 'installing':
             setUpdateStatus('updateInstalling', { version });
+            updateProgress.hidden = true;
             break;
         case 'unavailable':
-            updateBtn.disabled = false;
-            setUpdateStatus('updateUnavailable');
+            updateBtn.hidden = true;
+            updateProgress.hidden = true;
+            updateStatus.hidden = true;
+            updateSection.hidden = true;
             break;
         case 'error':
             updateBtn.disabled = false;
             updateProgress.hidden = true;
+            updateBtn.hidden = !availableUpdateVersion;
             setUpdateStatus('updateFailed', { message });
             break;
         default:

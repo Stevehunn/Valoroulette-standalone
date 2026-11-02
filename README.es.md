@@ -9,6 +9,7 @@ La interfaz está disponible en inglés, español, francés, alemán, portugués
 ## Funciones
 
 - Gira la flecha para elegir entre los agentes disponibles.
+- Filtra la ruleta por uno o varios roles, o excluye y restaura un rol completo.
 - Excluye al agente seleccionado, restaura agentes individualmente o restablece todas las exclusiones.
 - Añade agentes personalizados con retratos PNG.
 - Activa el modo secreto para garantizar el agente que elijas.
