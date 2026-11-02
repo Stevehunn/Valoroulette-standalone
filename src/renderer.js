@@ -41,6 +41,11 @@ const AGENT_ROLES = [
 // Variables pour l'animation
 let canvas = document.getElementById('wheelCanvas');
 let ctx = canvas.getContext('2d');
+const wheelCacheCanvas = document.createElement('canvas');
+wheelCacheCanvas.width = canvas.width;
+wheelCacheCanvas.height = canvas.height;
+const wheelCacheCtx = wheelCacheCanvas.getContext('2d');
+let wheelCacheSignature = null;
 let currentRotation = 0;
 let isSpinning = false;
 let selectedImageForCustom = null;
@@ -324,15 +329,60 @@ function getAgentImageSource(agent) {
 }
 
 // ============ DESSIN DE LA ROUE ============
-/** Draw the fixed agent positions and rotate the pointer to the current angle. */
-function drawWheel(wheelRotation = currentRotation) {
-    ctx.clearRect(0, 0, 500, 500);
-    
+/** Render the wheel rim and agent portraits once for reuse during animation. */
+function drawStaticWheel() {
     const centerX = 250;
     const centerY = 250;
     const radius = 240;
     const count = state.availableAgents.length;
-    
+    const angleStep = (Math.PI * 2) / count;
+
+    wheelCacheCtx.clearRect(0, 0, wheelCacheCanvas.width, wheelCacheCanvas.height);
+    wheelCacheCtx.beginPath();
+    wheelCacheCtx.arc(centerX, centerY, radius + 15, 0, Math.PI * 2);
+    wheelCacheCtx.fillStyle = '#1a1a2e';
+    wheelCacheCtx.fill();
+    wheelCacheCtx.strokeStyle = '#ff4655';
+    wheelCacheCtx.lineWidth = 3;
+    wheelCacheCtx.stroke();
+
+    state.availableAgents.forEach((agent, index) => {
+        const angle = index * angleStep;
+        const imageRadius = radius - 40; // Marge de 40px pour contenir les cercles de 32px
+        const x = centerX + Math.cos(angle) * imageRadius;
+        const y = centerY + Math.sin(angle) * imageRadius;
+        const img = agentImages.get(agent.nom);
+
+        if (img) {
+            wheelCacheCtx.save();
+            wheelCacheCtx.translate(x, y);
+            wheelCacheCtx.rotate(angle + Math.PI / 2);
+
+            wheelCacheCtx.beginPath();
+            wheelCacheCtx.arc(0, 0, 32, 0, Math.PI * 2);
+            wheelCacheCtx.fillStyle = '#2a2a4a';
+            wheelCacheCtx.fill();
+            wheelCacheCtx.strokeStyle = '#ff4655';
+            wheelCacheCtx.lineWidth = 2;
+            wheelCacheCtx.stroke();
+
+            wheelCacheCtx.beginPath();
+            wheelCacheCtx.arc(0, 0, 30, 0, Math.PI * 2);
+            wheelCacheCtx.clip();
+            wheelCacheCtx.drawImage(img, -32, -32, 64, 64);
+            wheelCacheCtx.restore();
+        }
+    });
+}
+
+/** Reuse the static wheel image while drawing only the winner and pointer per frame. */
+function drawWheel(wheelRotation = currentRotation) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const centerX = 250;
+    const centerY = 250;
+    const count = state.availableAgents.length;
+
     if (count === 0) {
         ctx.fillStyle = 'white';
         ctx.font = '20px Arial';
@@ -340,55 +390,18 @@ function drawWheel(wheelRotation = currentRotation) {
         ctx.fillText(window.appI18n.translate('noAgentsAvailable'), centerX, centerY);
         return;
     }
-    
-    const angleStep = (Math.PI * 2) / count;
-    
-    // Fond de la roue
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius + 15, 0, Math.PI * 2);
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fill();
-    ctx.strokeStyle = '#ff4655';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    
-    // Les agents restent fixes pendant que la flèche tourne.
-    state.availableAgents.forEach((agent, index) => {
-        const angle = index * angleStep;
-        
-        // Positionner les agents à l'intérieur du cercle
-        const imageRadius = radius - 40; // Marge de 40px pour contenir les cercles de 32px
-        
-        const x = centerX + Math.cos(angle) * imageRadius;
-        const y = centerY + Math.sin(angle) * imageRadius;
-        
-        const img = agentImages.get(agent.nom);
-        if (img) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.rotate(angle + Math.PI / 2);
-            
-            // Cercle rouge pour l'agent (32px de rayon = 64px de diamètre)
-            ctx.beginPath();
-            ctx.arc(0, 0, 32, 0, Math.PI * 2);
-            ctx.fillStyle = '#2a2a4a';
-            ctx.fill();
-            ctx.strokeStyle = '#ff4655';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            
-            // Clip pour que l'image ne dépasse pas du cercle
-            ctx.beginPath();
-            ctx.arc(0, 0, 30, 0, Math.PI * 2); // Légèrement plus petit pour laisser la bordure visible
-            ctx.clip();
-            
-            // Dessiner l'image (64x64 pour correspondre au cercle de 32px de rayon)
-            ctx.drawImage(img, -32, -32, 64, 64);
-            
-            ctx.restore();
-        }
-    });
-    
+
+    const signature = state.availableAgents
+        .map(agent => `${agent.nom}:${agentImages.get(agent.nom)?.src || ''}`)
+        .join('|');
+
+    if (signature !== wheelCacheSignature) {
+        drawStaticWheel();
+        wheelCacheSignature = signature;
+    }
+
+    ctx.drawImage(wheelCacheCanvas, 0, 0);
+
     // === CENTRE DE LA ROUE ===
     if (currentWinner) {
         const winnerImg = agentImages.get(currentWinner.nom);
