@@ -5,15 +5,14 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-packager . \"Valorant Roulette\" --platform=win32 --arch=x64 --out=dist --overwrite --ignore=node_modules --ignore=.git --ignore=dist --icon=\"./assets/icons/icon.ico\""
+    "pack": "electron-builder --win nsis --publish never",
+    "dist": "electron-builder --win nsis --publish never"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^41.3.0",
-    "electron-builder": "^26.8.1",
-    "electron-packager": "^17.1.2",
-    "rcedit": "^5.0.2"
+    "electron": "^45.2.1",
+    "electron-builder": "^26.18.0"
   },
   "build": {
     "appId": "com.valorant.roulette",
@@ -22,10 +21,13 @@
       "output": "dist"
     },
     "win": {
-      "target": "portable"
+      "target": "nsis",
+      "icon": "assets/icons/icon.ico"
     },
-    "portable": {
-      "artifactName": "Valorant Roulette.exe"
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "Valorant-Roulette-Setup-${version}.${ext}"
     },
     "files": [
       "main.js",
@@ -35,6 +37,16 @@
       "data/**/*"
     ],
     "asar": true,
-    "forceCodeSigning": false
+    "forceCodeSigning": false,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Stevehunn",
+        "repo": "Valoroulette-standalone"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }

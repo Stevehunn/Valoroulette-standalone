@@ -1,117 +1,67 @@
-# 🎯 Valorant Roulette - Standalone
+# Valoroulette
 
-Une application de roulette des agents Valorant en standalone (exécutable Windows). 
+**English** · [Français](README.fr.md) · [Español](README.es.md)
 
-Sélectionnez aléatoirement un agent parmi tous les agents disponibles, avec des fonctionnalités avancées comme l'exclusion d'agents, l'ajout d'agents personnalisés et un mode secret.
+Valoroulette is a Windows desktop app that randomly selects a VALORANT agent. It includes a spinning pointer, agent exclusions, custom agents, a secret target mode, and GitHub release updates.
 
-![Valorant Roulette](assets/icons/icon.ico)
+## Features
 
----
+- Spin the pointer to select from available agents.
+- Exclude a selected agent, restore individual agents, or reset all exclusions.
+- Add custom agents with PNG portraits.
+- Optionally guarantee a chosen agent with Secret Mode.
+- Check GitHub Releases for updates; available updates download and install automatically.
+- Keep settings and custom portraits across app upgrades.
 
-## ✨ Fonctionnalités
+## Requirements
 
-- 🎡 **Roulette interactive** : Agents affichés en cercle avec un curseur animé
-- 🎲 **Sélection aléatoire** : Animation fluide avec ralentissement progressif
-- 🚫 **Système d'exclusion** : Retirez des agents de la roulette et réintégrez-les
-- ➕ **Agents personnalisés** : Ajoutez vos propres agents avec nom et image PNG
-- 🔒 **Mode secret** : Activez un mode garantissant un agent spécifique avec un raccourci clavier : Ctrl + Shift + A
-- 💾 **Sauvegarde automatique** : L'état est conservé entre les sessions
-- 🖼️ **Affichage du gagnant** : L'agent sélectionné s'affiche en grand au centre
+- Windows 10 or later (64-bit)
+- Node.js 22.12 or later and npm, for development or building
 
----
+## Run from source
 
-## 📋 Prérequis
-
-- **Node.js** (version 18 ou supérieure)
-- **npm** (installé avec Node.js)
-- **Git** (optionnel, pour cloner le projet)
-
----
-
-## 🚀 Installation
-
-### 1. Cloner le projet
-
-
-```bash
-git clone https://github.com/votre-username/Valoroulette-standalone.git
+```powershell
+git clone https://github.com/Stevehunn/Valoroulette-standalone.git
 cd Valoroulette-standalone
-```
-
-### 2. Installer les dépendances
-
-```bash
-npm install
-```
-
-### 3. Lancer l'application en développement
-
-```bash
+npm ci
 npm start
 ```
 
-## Executable
+## Build the Windows installer
 
-# Installer electron-packager (si pas déjà fait)
-
-```bash
-npm install electron-packager --save-dev
+```powershell
+npm run dist
 ```
 
-# Créer l'exécutable
+The NSIS installer and update metadata are written to `dist/`. Install the app with this installer to use in-app updates; older portable builds must first be replaced manually.
 
-```bash
-npm run pack
+## Publish a release
+
+The repository must be public so the app can download release files without a GitHub login. To publish an update:
+
+1. Increase the `version` in `package.json`.
+2. Push the change to GitHub.
+3. Create and publish a GitHub Release with a matching `v` tag (for example, version `1.2.0` uses tag `v1.2.0`).
+4. The `Build Windows release` workflow builds the installer and uploads it, its blockmap, and `latest.yml` to the release.
+
+The version check in the workflow prevents releases with a mismatched tag. Users select **Check for updates** in the app menu; the installer downloads and launches automatically when a newer release is found.
+
+## Project layout
+
+```text
+main.js                     Electron main process, persistence, updates, and dialogs
+preload.js                  Restricted bridge between the renderer and Electron
+src/
+  index.html                Main window markup
+  renderer.js               Roulette, menu, and UI behavior
+  style.css                 Main window styles
+data/agents.json            Canonical list of built-in agents
+assets/agents/              Built-in agent portraits
+.github/workflows/          Release build and upload workflow
 ```
 
-------------------------------------------------------------------
+User settings and custom images are stored in Electron's per-user data directory, not in the installation folder.
 
-### Info sur le Projet
+## License
 
-# Structure du Projet
-
-Valoroulette-standalone/
-├── main.js                      # Processus principal Electron
-├── preload.js                   # Pont sécurisé IPC
-├── package.json                 # Configuration Node/Electron
-├── README.md                    # Documentation
-├── .gitignore                   # Fichiers ignorés par Git
-│
-├── assets/
-│   ├── agents/                  # Images des agents (PNG)
-│   │   ├── Jett.png
-│   │   ├── Phoenix.png
-│   │   └── ...
-│   ├── custom/                  # Images des agents personnalisés
-│   └── icons/                   # Icône de l'application
-│       └── icon.ico
-│
-├── data/
-│   └── agents.json              # Liste des agents par défaut
-│
-└── src/
-    ├── index.html               # Interface principale
-    ├── style.css                # Styles de l'application
-    ├── renderer.js              # Logique de la roulette
-    ├── secret.html              # Fenêtre du mode secret
-    └── secret.js                # Logique du mode secret
-
-
-# 🛠️ Technologies utilisées
-Electron : Framework pour applications desktop
-
-Canvas API : Rendu graphique de la roulette
-
-Electron Packager : Création d'exécutables
-
-Electron Builder : Packaging et distribution
-
-# Commande
-
-Commande	    Description
-npm start	    Lance l'application en développement
-npm run pack	Crée un exécutable portable avec Electron Packager
-npm run dist	Crée un exécutable avec Electron Builder
-
-# 📄 Licence
-ISC License
+ISC. VALORANT and its agents are trademarks of Riot Games; this project is not affiliated with or endorsed by Riot Games.

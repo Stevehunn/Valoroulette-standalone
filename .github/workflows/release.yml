@@ -1,0 +1,57 @@
+name: Build Windows release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $expectedTag = "v$(node -p "require('./package.json').version")"
+          if ($env:RELEASE_TAG -ne $expectedTag) {
+            throw "Release tag $env:RELEASE_TAG does not match $expectedTag"
+          }
+
+      - name: Build installer
+        run: npm run dist
+
+      - name: Upload updater files to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $assets = Get-ChildItem dist -File | Where-Object {
+            $_.Name -match '\.exe(\.blockmap)?$|^latest\.yml$'
+          }
+          if (-not ($assets | Where-Object { $_.Name -match '\.exe$' })) {
+            throw "No Windows installer was created"
+          }
+          if (-not ($assets | Where-Object { $_.Name -eq 'latest.yml' })) {
+            throw "Updater metadata latest.yml was not created"
+          }
+          foreach ($asset in $assets) {
+            gh release upload $env:RELEASE_TAG $asset.FullName --clobber
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to upload $($asset.Name)"
+            }
+          }

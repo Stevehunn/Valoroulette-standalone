@@ -8,11 +8,39 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- En-tête -->
         <header>
             <h1>🎯 Valoroulette</h1>
-            <!-- Bouton secret discret -->
-            <button id="secretModeToggle" class="secret-toggle" title="Mode Secret">🔒</button>
+            <details id="appMenu" class="app-menu">
+                <summary aria-label="Ouvrir le menu">☰ <span>Menu</span></summary>
+                <div class="menu-panel">
+                    <section class="update-section">
+                        <h2>Mise à jour</h2>
+                        <button id="updateBtn" class="btn-secondary">↻ Vérifier les mises à jour</button>
+                        <progress id="updateProgress" max="100" value="0" hidden></progress>
+                        <p id="updateStatus" class="update-status" aria-live="polite">
+                            Vérifiez si une nouvelle version est disponible.
+                        </p>
+                    </section>
+                    <button id="secretModeToggle" class="secret-toggle" title="Mode Secret" aria-pressed="false">
+                        🔒 Activer le mode secret
+                    </button>
+                    <div id="secretTargetControls" class="secret-target-controls" hidden>
+                        <label class="secret-target-label" for="secretTargetSelect">Agent cible</label>
+                        <select id="secretTargetSelect" class="secret-target-select"></select>
+                    </div>
+                    <p id="secretModeStatus" class="secret-mode-status" aria-live="polite"></p>
+                    <section class="add-agent-section">
+                        <h2>➕ Ajouter un agent personnalisé</h2>
+                        <div class="add-agent-form">
+                            <input type="text" id="agentNameInput" placeholder="Nom de l'agent" />
+                            <button id="selectImageBtn" class="btn-secondary">📁 Choisir une image (PNG)</button>
+                            <button id="addAgentBtn" class="btn-primary">✅ Ajouter</button>
+                            <span id="selectedImagePath" class="image-path"></span>
+                        </div>
+                        <div id="customAgentsList" class="custom-agents-list"></div>
+                    </section>
+                </div>
+            </details>
         </header>
 
         <!-- Contenu principal -->
@@ -37,19 +65,6 @@
             </div>
         </div>
 
-        <!-- Section Ajout d'agent -->
-        <div class="add-agent-section">
-            <h2>➕ Ajouter un agent personnalisé</h2>
-            <div class="add-agent-form">
-                <input type="text" id="agentNameInput" placeholder="Nom de l'agent" />
-                <button id="selectImageBtn" class="btn-secondary">📁 Choisir une image (PNG)</button>
-                <button id="addAgentBtn" class="btn-primary">✅ Ajouter</button>
-                <span id="selectedImagePath" class="image-path"></span>
-            </div>
-            
-            <!-- Liste des agents custom -->
-            <div id="customAgentsList" class="custom-agents-list"></div>
-        </div>
     </div>
 
     <script src="renderer.js"></script>

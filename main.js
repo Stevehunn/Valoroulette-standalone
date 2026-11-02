@@ -1,66 +1,25 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, globalShortcut } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+const { fileURLToPath, pathToFileURL } = require('url');
 
-// Chemins des fichiers de données
+// User-created data belongs in userData so it survives app upgrades.
 const userDataPath = app.getPath('userData');
 const stateFilePath = path.join(userDataPath, 'user_state.json');
-const customImagesDir = path.join(__dirname, 'assets', 'custom');
-
-// S'assurer que les dossiers existent
-if (!fs.existsSync(customImagesDir)) {
-    fs.mkdirSync(customImagesDir, { recursive: true });
-}
-
-if (!fs.existsSync(path.join(__dirname, 'data'))) {
-    fs.mkdirSync(path.join(__dirname, 'data'));
-}
-
-// Liste des agents par défaut
-const defaultAgents = [
-  { "nom": "Jett", "image": "assets/agents/Jett.png" },
-  { "nom": "Phoenix", "image": "assets/agents/Phoenix.png" },
-  { "nom": "Sova", "image": "assets/agents/Sova.png" },
-  { "nom": "Sage", "image": "assets/agents/Sage.png" },
-  { "nom": "Cypher", "image": "assets/agents/Cypher.png" },
-  { "nom": "Omen", "image": "assets/agents/Omen.png" },
-  { "nom": "Brimstone", "image": "assets/agents/Brimstone.png" },
-  { "nom": "Viper", "image": "assets/agents/Viper.png" },
-  { "nom": "Killjoy", "image": "assets/agents/Killjoy.png" },
-  { "nom": "Raze", "image": "assets/agents/Raze.png" },
-  { "nom": "Breach", "image": "assets/agents/Breach.png" },
-  { "nom": "Skye", "image": "assets/agents/Skye.png" },
-  { "nom": "Yoru", "image": "assets/agents/Yoru.png" },
-  { "nom": "KAY/O", "image": "assets/agents/Kayo.png" },
-  { "nom": "Astra", "image": "assets/agents/Astra.png" },
-  { "nom": "Neon", "image": "assets/agents/Neon.png" },
-  { "nom": "Harbor", "image": "assets/agents/Harbor.png" },
-  { "nom": "Chamber", "image": "assets/agents/Chamber.png" },
-  { "nom": "Fade", "image": "assets/agents/Fade.png" },
-  { "nom": "Gekko", "image": "assets/agents/Gekko.png" },
-  { "nom": "Deadlock", "image": "assets/agents/Deadlock.png" },
-  { "nom": "Clove", "image": "assets/agents/Clove.png" },
-  { "nom": "Vyse", "image": "assets/agents/Vyse.png" },
-  { "nom": "Tejo", "image": "assets/agents/Tejo.png" },
-  { "nom": "Reyna", "image": "assets/agents/Reyna.png" },
-  { "nom": "Iso", "image": "assets/agents/Iso.png" },
-  { "nom": "Waylay", "image": "assets/agents/Waylay.png" },
-  { "nom": "Miks", "image": "assets/agents/Miks.png" }
-];
-
-// Créer le fichier agents.json
+const customImagesDir = path.join(userDataPath, 'custom-images');
 const agentsJsonPath = path.join(__dirname, 'data', 'agents.json');
-if (!fs.existsSync(agentsJsonPath)) {
-    fs.writeFileSync(agentsJsonPath, JSON.stringify(defaultAgents, null, 2));
-}
 
-// État utilisateur par défaut
+fs.mkdirSync(customImagesDir, { recursive: true });
+
+/** Default data persisted for first-time users. */
 const defaultUserState = {
     agentsCustom: [],
-    agentsExclus: [],
+    agentsExcluded: [],
     secretMode: { enabled: false, target: "Jett" }
 };
 
+/** Load the saved state or create it on first launch. */
 function initUserState() {
     if (!fs.existsSync(stateFilePath)) {
         fs.writeFileSync(stateFilePath, JSON.stringify(defaultUserState, null, 2));
@@ -69,7 +28,48 @@ function initUserState() {
 }
 
 let mainWindow;
-let secretWindow = null;
+
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+autoUpdater.allowPrerelease = false;
+
+/**
+ * Relay updater events to the renderer. The updater downloads only after the
+ * user requests a check; a completed download is installed automatically.
+ */
+function sendUpdateStatus(status, details = {}) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-status', { status, ...details });
+    }
+}
+
+autoUpdater.on('checking-for-update', () => {
+    sendUpdateStatus('checking');
+});
+
+autoUpdater.on('update-available', (info) => {
+    sendUpdateStatus('downloading', { version: info.version });
+    autoUpdater.downloadUpdate().catch((error) => {
+        sendUpdateStatus('error', { message: error.message });
+    });
+});
+
+autoUpdater.on('update-not-available', () => {
+    sendUpdateStatus('current');
+});
+
+autoUpdater.on('download-progress', (progress) => {
+    sendUpdateStatus('progress', { percent: progress.percent });
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+    sendUpdateStatus('installing', { version: info.version });
+    setTimeout(() => autoUpdater.quitAndInstall(), 1500);
+});
+
+autoUpdater.on('error', (error) => {
+    sendUpdateStatus('error', { message: error.message });
+});
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -79,7 +79,6 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            webSecurity: false
         }
     });
 
@@ -89,34 +88,20 @@ function createWindow() {
     // mainWindow.webContents.openDevTools();
     
     Menu.setApplicationMenu(null);
-    
-    globalShortcut.register('CommandOrControl+Shift+A', () => {
-        openSecretWindow();
-    });
-}
 
-function openSecretWindow() {
-    if (secretWindow) {
-        secretWindow.focus();
-        return;
-    }
-    
-    secretWindow = new BrowserWindow({
-        width: 400,
-        height: 300,
-        parent: mainWindow,
-        modal: true,
-        webPreferences: {
-            preload: path.join(__dirname, 'preload.js'),
-            contextIsolation: true,
-            nodeIntegration: false,
-            webSecurity: false
-        },
-        title: 'Configuration Secrète'
+    globalShortcut.register('CommandOrControl+Shift+A', () => {
+        if (!mainWindow) return;
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.show();
+        mainWindow.focus();
+
+        const openMenu = () => mainWindow.webContents.send('open-secret-menu');
+        if (mainWindow.webContents.isLoading()) {
+            mainWindow.webContents.once('did-finish-load', openMenu);
+        } else {
+            openMenu();
+        }
     });
-    
-    secretWindow.loadFile(path.join(__dirname, 'src', 'secret.html'));
-    secretWindow.on('closed', () => { secretWindow = null; });
 }
 
 // IPC Handlers
@@ -125,7 +110,19 @@ ipcMain.handle('get-user-state', async () => {
 });
 
 ipcMain.handle('get-default-agents', async () => {
+    // agents.json is the single source of truth for built-in agents.
     return JSON.parse(fs.readFileSync(agentsJsonPath, 'utf8'));
+});
+
+/** Only packaged installers can use electron-updater. */
+ipcMain.handle('check-for-updates', async () => {
+    if (!app.isPackaged) {
+        sendUpdateStatus('unavailable');
+        return false;
+    }
+
+    await autoUpdater.checkForUpdates();
+    return true;
 });
 
 ipcMain.handle('save-user-state', async (event, state) => {
@@ -142,13 +139,13 @@ ipcMain.handle('select-image', async () => {
     if (!result.canceled && result.filePaths.length > 0) {
         const sourcePath = result.filePaths[0];
         const fileName = path.basename(sourcePath);
-        const destPath = path.join(customImagesDir, fileName);
+        const destPath = path.join(customImagesDir, `${Date.now()}-${fileName}`);
         
         fs.copyFileSync(sourcePath, destPath);
         
         return {
             success: true,
-            path: `assets/custom/${fileName}`,
+            path: pathToFileURL(destPath).href,
             name: path.basename(fileName, '.png')
         };
     }
@@ -156,15 +153,24 @@ ipcMain.handle('select-image', async () => {
 });
 
 ipcMain.handle('delete-custom-image', async (event, imagePath) => {
-    const fullPath = path.join(__dirname, imagePath);
+    // Accept old in-installation paths for existing custom-agent state.
+    const fullPath = imagePath.startsWith('file://')
+        ? path.resolve(fileURLToPath(imagePath))
+        : path.resolve(__dirname, imagePath);
+    const allowedDirectories = [
+        path.resolve(customImagesDir),
+        path.resolve(__dirname, 'assets', 'custom')
+    ];
+    const parentDirectory = path.dirname(fullPath);
+
+    if (!allowedDirectories.includes(parentDirectory)) {
+        throw new Error('Invalid custom image path');
+    }
+
     if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
     }
     return true;
-});
-
-ipcMain.handle('open-secret-window', () => {
-    openSecretWindow();
 });
 
 app.whenReady().then(() => {

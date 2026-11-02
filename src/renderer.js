@@ -11,15 +11,10 @@ let state = {
 let canvas = document.getElementById('wheelCanvas');
 let ctx = canvas.getContext('2d');
 let currentRotation = 0;
-let spinVelocity = 0;
 let isSpinning = false;
-let animationFrame = null;
 let selectedImageForCustom = null;
 let agentImages = new Map();
 let currentWinner = null;
-
-// Variables pour le mode secret avec animation naturelle
-let secretTargetAngle = null;
 
 // Éléments DOM
 const spinBtn = document.getElementById('spinBtn');
@@ -33,8 +28,15 @@ const selectedImagePath = document.getElementById('selectedImagePath');
 const customAgentsList = document.getElementById('customAgentsList');
 const wheelContainer = document.querySelector('.wheel-container');
 const secretModeToggle = document.getElementById('secretModeToggle');
+const secretTargetControls = document.getElementById('secretTargetControls');
+const secretTargetSelect = document.getElementById('secretTargetSelect');
+const secretModeStatus = document.getElementById('secretModeStatus');
+const updateBtn = document.getElementById('updateBtn');
+const updateProgress = document.getElementById('updateProgress');
+const updateStatus = document.getElementById('updateStatus');
+const appMenu = document.getElementById('appMenu');
 
-// ============ INITIALISATION ============
+/** Load persisted data and assets before drawing the initial roulette. */
 async function init() {
     const defaultAgents = await window.electronAPI.getDefaultAgents();
     const userState = await window.electronAPI.getUserState();
@@ -51,50 +53,54 @@ async function init() {
     drawWheel();
     updateExcludedDisplay();
     updateCustomAgentsDisplay();
+    updateSecretTargetOptions();
     updateSecretButtonState();
-    
-    console.log('🎯 Mode Secret: Ctrl+Shift+A ou bouton 🔒 en haut à droite');
+}
+
+/**
+ * Load one agent portrait, falling back to an initials tile when its file is missing.
+ * @param {{nom: string, image: string}} agent
+ * @param {string} [fallbackColor] Optional background color for custom agents.
+ */
+function loadAgentImage(agent, fallbackColor) {
+    return new Promise((resolve) => {
+        const image = new Image();
+
+        image.onload = () => {
+            agentImages.set(agent.nom, image);
+            resolve(image);
+        };
+
+        image.onerror = () => {
+            console.warn(`Image not found for ${agent.nom}: ${agent.image}`);
+            const fallback = createFallbackAgentImage(agent.nom, fallbackColor);
+            agentImages.set(agent.nom, fallback);
+            resolve(fallback);
+        };
+
+        image.src = getAgentImageSource(agent);
+    });
+}
+
+function createFallbackAgentImage(name, backgroundColor) {
+    const fallback = document.createElement('canvas');
+    fallback.width = 64;
+    fallback.height = 64;
+    const fallbackContext = fallback.getContext('2d');
+
+    fallbackContext.fillStyle = backgroundColor || `hsl(${(name.length * 40) % 360}, 70%, 50%)`;
+    fallbackContext.fillRect(0, 0, fallback.width, fallback.height);
+    fallbackContext.fillStyle = 'white';
+    fallbackContext.font = 'bold 32px Arial';
+    fallbackContext.textAlign = 'center';
+    fallbackContext.textBaseline = 'middle';
+    fallbackContext.fillText(name[0], fallback.width / 2, fallback.height / 2);
+
+    return fallback;
 }
 
 async function loadAllImages() {
-    const loadPromises = state.allAgents.map(agent => {
-        return new Promise((resolve) => {
-            const img = new Image();
-            
-            img.onload = () => {
-                console.log(`✅ Image chargée: ${agent.nom}`);
-                agentImages.set(agent.nom, img);
-                resolve();
-            };
-            
-            img.onerror = (e) => {
-                console.warn(`❌ Image non trouvée: ${agent.nom} -> ${agent.image}`);
-                
-                const canvas = document.createElement('canvas');
-                canvas.width = 64;
-                canvas.height = 64;
-                const ctx = canvas.getContext('2d');
-                
-                const hue = (agent.nom.length * 40) % 360;
-                ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
-                ctx.fillRect(0, 0, 64, 64);
-                
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 32px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(agent.nom[0], 32, 32);
-                
-                agentImages.set(agent.nom, canvas);
-                resolve();
-            };
-            
-            img.src = '../' + agent.image;
-        });
-    });
-    
-    await Promise.all(loadPromises);
-    console.log('✅ Toutes les images sont chargées');
+    await Promise.all(state.allAgents.map(agent => loadAgentImage(agent)));
 }
 
 function updateAvailableAgents() {
@@ -106,17 +112,47 @@ function updateAvailableAgents() {
 function updateSecretButtonState() {
     if (state.secretMode.enabled) {
         secretModeToggle.classList.add('active');
-        secretModeToggle.textContent = '🔓';
+        secretModeToggle.textContent = '🔓 Désactiver le mode secret';
         secretModeToggle.title = `Mode Secret ACTIF - Cible: ${state.secretMode.target}`;
+        secretModeToggle.setAttribute('aria-pressed', 'true');
     } else {
         secretModeToggle.classList.remove('active');
-        secretModeToggle.textContent = '🔒';
+        secretModeToggle.textContent = '🔒 Activer le mode secret';
         secretModeToggle.title = 'Mode Secret INACTIF';
+        secretModeToggle.setAttribute('aria-pressed', 'false');
     }
+
+    secretModeStatus.textContent = `Mode secret ${state.secretMode.enabled ? 'activé' : 'désactivé'} — cible : ${state.secretMode.target}`;
+    secretModeToggle.disabled = state.allAgents.length === 0;
+    secretTargetControls.hidden = !state.secretMode.enabled;
+}
+
+function updateSecretTargetOptions() {
+    secretTargetSelect.replaceChildren();
+
+    state.allAgents.forEach(agent => {
+        const option = document.createElement('option');
+        option.value = agent.nom;
+        option.textContent = agent.nom;
+        secretTargetSelect.appendChild(option);
+    });
+
+    if (!state.allAgents.some(agent => agent.nom === state.secretMode.target)) {
+        state.secretMode.target = state.allAgents[0]?.nom || '';
+    }
+
+    secretTargetSelect.value = state.secretMode.target;
+    secretTargetSelect.disabled = state.allAgents.length === 0;
+}
+
+/** Resolve both legacy bundled paths and persistent custom-image file URLs. */
+function getAgentImageSource(agent) {
+    return agent.image.startsWith('file://') ? agent.image : '../' + agent.image;
 }
 
 // ============ DESSIN DE LA ROUE ============
-function drawWheel(cursorAngle = currentRotation) {
+/** Draw the fixed agent positions and rotate the pointer to the current angle. */
+function drawWheel(wheelRotation = currentRotation) {
     ctx.clearRect(0, 0, 500, 500);
     
     const centerX = 250;
@@ -143,7 +179,7 @@ function drawWheel(cursorAngle = currentRotation) {
     ctx.lineWidth = 3;
     ctx.stroke();
     
-    // Dessiner les agents (positions FIXES)
+    // Les agents restent fixes pendant que la flèche tourne.
     state.availableAgents.forEach((agent, index) => {
         const angle = index * angleStep;
         
@@ -235,6 +271,7 @@ function drawWheel(cursorAngle = currentRotation) {
     const cursorStartRadius = 75;
     const cursorEndRadius = 155;
     
+    const cursorAngle = wheelRotation - Math.PI / 2;
     const startX = centerX + Math.cos(cursorAngle) * cursorStartRadius;
     const startY = centerY + Math.sin(cursorAngle) * cursorStartRadius;
     const endX = centerX + Math.cos(cursorAngle) * cursorEndRadius;
@@ -293,14 +330,15 @@ function spinWheel() {
     currentWinner = null;
     drawWheel(currentRotation);
     
-    spinVelocity = 0.3 + Math.random() * 0.5;
+    // Keep velocity local to this spin so completed animations leave no stale state.
+    let spinVelocity = 0.3 + Math.random() * 0.5;
     
-    secretTargetAngle = null;
+    let secretTargetAngle = null;
     if (state.secretMode.enabled && state.availableAgents.length > 0) {
         const targetIndex = state.availableAgents.findIndex(a => a.nom === state.secretMode.target);
         if (targetIndex !== -1) {
             const angleStep = (Math.PI * 2) / state.availableAgents.length;
-            secretTargetAngle = targetIndex * angleStep;
+            secretTargetAngle = targetIndex * angleStep + Math.PI / 2;
         }
     }
     
@@ -328,12 +366,10 @@ function spinWheel() {
             }
             
             drawWheel(currentRotation);
-            animationFrame = requestAnimationFrame(animate);
+            requestAnimationFrame(animate);
         } else {
             isSpinning = false;
             spinBtn.disabled = false;
-            animationFrame = null;
-            
             if (secretTargetAngle !== null) {
                 let normalizedCurrent = currentRotation % (Math.PI * 2);
                 if (normalizedCurrent < 0) normalizedCurrent += Math.PI * 2;
@@ -353,7 +389,7 @@ function determineWinner() {
     
     const angleStep = (Math.PI * 2) / state.availableAgents.length;
     
-    let normalizedAngle = currentRotation % (Math.PI * 2);
+    let normalizedAngle = (currentRotation - Math.PI / 2) % (Math.PI * 2);
     if (normalizedAngle < 0) normalizedAngle += Math.PI * 2;
     
     let minDiff = Infinity;
@@ -383,20 +419,9 @@ function determineWinner() {
 // ============ MODE SECRET ============
 function toggleSecretMode() {
     state.secretMode.enabled = !state.secretMode.enabled;
-    
-    if (state.secretMode.enabled) {
-        window.electronAPI.openSecretWindow();
-    }
-    
     updateSecretButtonState();
     saveState();
 }
-
-window.addEventListener('focus', async () => {
-    const userState = await window.electronAPI.getUserState();
-    state.secretMode = userState.secretMode || { enabled: false, target: "Jett" };
-    updateSecretButtonState();
-});
 
 // ============ EXCLUSION ============
 function excludeCurrentAgent() {
@@ -492,30 +517,10 @@ async function addCustomAgent() {
     
     state.customAgents.push(newAgent);
     state.allAgents.push(newAgent);
+    updateSecretTargetOptions();
+    updateSecretButtonState();
     
-    await new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => {
-            agentImages.set(name, img);
-            resolve();
-        };
-        img.onerror = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64;
-            canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ff4655';
-            ctx.fillRect(0, 0, 64, 64);
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 32px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(name[0], 32, 32);
-            agentImages.set(name, canvas);
-            resolve();
-        };
-        img.src = '../' + selectedImageForCustom.path;
-    });
+    await loadAgentImage(newAgent, '#ff4655');
     
     updateAvailableAgents();
     drawWheel(currentRotation);
@@ -533,6 +538,8 @@ async function deleteCustomAgent(agent) {
     
     state.customAgents = state.customAgents.filter(a => a.nom !== agent.nom);
     state.allAgents = state.allAgents.filter(a => a.nom !== agent.nom);
+    updateSecretTargetOptions();
+    updateSecretButtonState();
     state.excludedAgents = state.excludedAgents.filter(name => name !== agent.nom);
     agentImages.delete(agent.nom);
     
@@ -578,6 +585,7 @@ function updateCustomAgentsDisplay() {
 }
 
 async function saveState() {
+    // Persist only user-editable settings; bundled agents are loaded from agents.json.
     await window.electronAPI.saveUserState({
         agentsCustom: state.customAgents,
         agentsExcluded: state.excludedAgents,
@@ -590,6 +598,62 @@ spinBtn.addEventListener('click', spinWheel);
 excludeBtn.addEventListener('click', excludeCurrentAgent);
 resetExcludedBtn.addEventListener('click', resetAllExcluded);
 secretModeToggle.addEventListener('click', toggleSecretMode);
+
+secretTargetSelect.addEventListener('change', () => {
+    state.secretMode.target = secretTargetSelect.value;
+    updateSecretButtonState();
+    saveState();
+});
+
+updateBtn.addEventListener('click', async () => {
+    updateBtn.disabled = true;
+    updateProgress.hidden = true;
+    updateStatus.textContent = 'Recherche des mises à jour…';
+
+    try {
+        await window.electronAPI.checkForUpdates();
+    } catch (error) {
+        updateBtn.disabled = false;
+        updateStatus.textContent = `Échec de la vérification : ${error.message}`;
+    }
+});
+
+window.electronAPI.onUpdateStatus(({ status, version, percent, message }) => {
+    switch (status) {
+        case 'checking':
+            updateStatus.textContent = 'Recherche des mises à jour…';
+            break;
+        case 'current':
+            updateBtn.disabled = false;
+            updateProgress.hidden = true;
+            updateStatus.textContent = 'Votre application est à jour.';
+            break;
+        case 'downloading':
+            updateStatus.textContent = `Version ${version} disponible. Téléchargement…`;
+            updateProgress.value = 0;
+            updateProgress.hidden = false;
+            break;
+        case 'progress':
+            updateProgress.value = percent;
+            updateStatus.textContent = `Téléchargement de la mise à jour : ${Math.round(percent)} %`;
+            break;
+        case 'installing':
+            updateStatus.textContent = `Version ${version} téléchargée. Installation en cours…`;
+            break;
+        case 'unavailable':
+            updateBtn.disabled = false;
+            updateStatus.textContent = 'Les mises à jour sont disponibles dans la version installée de l’application.';
+            break;
+        case 'error':
+            updateBtn.disabled = false;
+            updateProgress.hidden = true;
+            updateStatus.textContent = `Erreur de mise à jour : ${message}`;
+            break;
+        default:
+            updateBtn.disabled = false;
+            updateStatus.textContent = 'État de mise à jour inconnu.';
+    }
+});
 
 selectImageBtn.addEventListener('click', async () => {
     const result = await window.electronAPI.selectImage();
@@ -608,9 +672,25 @@ agentNameInput.addEventListener('input', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'A') {
-        window.electronAPI.openSecretWindow();
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        appMenu.open = true;
+        secretTargetSelect.focus();
     }
+    if (e.key === 'Escape') {
+        appMenu.open = false;
+    }
+});
+
+document.addEventListener('click', (event) => {
+    if (!appMenu.contains(event.target)) {
+        appMenu.open = false;
+    }
+});
+
+window.electronAPI.onOpenSecretMenu(() => {
+    appMenu.open = true;
+    secretTargetSelect.focus();
 });
 
 // ============ DÉMARRAGE ============
